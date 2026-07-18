@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "confluence-engine"
+version = "0.1.0"
+description = "A pluggable trading-strategy framework: indicators, market data adapters, backtesting, and a Strategy interface you implement yourself."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Rustam335" }]
+keywords = ["trading", "backtesting", "technical-analysis", "crypto", "forex", "quant"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Financial and Insurance Industry",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Office/Business :: Financial :: Investment",
+]
+dependencies = [
+  "pandas>=2.2.0",
+  "numpy>=1.26.0",
+  "pandas-ta>=0.3.14b",
+  "ccxt>=4.4.0",
+  "yfinance>=0.2.40",
+  "pydantic>=2.9.0",
+  "requests>=2.32.0",
+]
+
+[project.optional-dependencies]
+llm = ["ollama>=0.4.0"]
+dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.6"]
+
+[project.urls]
+Homepage = "https://github.com/Rustam335/confluence-engine"
+Repository = "https://github.com/Rustam335/confluence-engine"
+Issues = "https://github.com/Rustam335/confluence-engine/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/confluence_engine"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -45,3 +45,9 @@ packages = ["src/confluence_engine"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+filterwarnings = [
+  # pandas-ta 0.4.x sets the `mode.copy_on_write` pandas option on import, which
+  # pandas 3.0 deprecated. It's a harmless third-party import-time warning, not
+  # from our code — silence it so our own output stays pristine.
+  "ignore:The 'mode.copy_on_write' option is deprecated",
+]

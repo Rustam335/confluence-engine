@@ -16,9 +16,13 @@ broker API (OANDA, MT5, dll) — defer ke phase berikutnya.
 from __future__ import annotations
 
 import time
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import requests
+
+if TYPE_CHECKING:
+    from ..config import AdapterConfig
 
 # TwelveData interval mapping
 _TF_MAP = {

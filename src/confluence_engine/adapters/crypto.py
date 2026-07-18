@@ -1,10 +1,13 @@
 """CCXT adapter — generic crypto exchange (Gate, Binance, Bybit, ...)."""
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import ccxt
 import pandas as pd
+
+if TYPE_CHECKING:
+    from ..config import AdapterConfig
 
 
 class CcxtAdapter:

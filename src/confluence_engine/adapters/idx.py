@@ -22,8 +22,12 @@ atau klien execute manual setelah signal.
 from __future__ import annotations
 
 import time
+from typing import TYPE_CHECKING
 
 import pandas as pd
+
+if TYPE_CHECKING:
+    from ..config import AdapterConfig
 
 # yfinance import-time bisa lambat — defer
 _yf = None

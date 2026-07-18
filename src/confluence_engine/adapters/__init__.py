@@ -8,9 +8,12 @@ Optional (untuk live trading): `fetch_balance` + `create_market_order`.
 """
 from __future__ import annotations
 
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 import pandas as pd
+
+if TYPE_CHECKING:
+    from ..config import AdapterConfig
 
 
 class MarketAdapter(Protocol):

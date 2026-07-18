@@ -60,7 +60,10 @@ def run_backtest(
     """Long-flat backtest: expanding-window walk. The signal for bar i is computed
     from bars 0..i (inclusive), and any resulting entry/exit fills at bar i's close
     — there is no execution lag. On BUY (flat) go long at that close; on
-    SELL/HOLD-with-open-position, exit at that close. Simplified reference impl."""
+    SELL/HOLD-with-open-position, exit at that close. Simplified reference impl.
+
+    Note: a position still open on the final bar is not force-closed, so its
+    P&L is excluded from the result."""
     equity = initial_equity
     position_price: float | None = None
     trades: list[dict] = []

@@ -1,23 +1,23 @@
-"""IDX (Bursa Efek Indonesia) adapter via yfinance.
+"""IDX (Indonesia Stock Exchange) adapter via yfinance.
 
-Yahoo Finance support saham IDX dengan suffix `.JK`:
-  BBCA.JK, BBRI.JK, TLKM.JK, ASII.JK, dst.
+Yahoo Finance supports IDX stocks with the `.JK` suffix:
+  BBCA.JK, BBRI.JK, TLKM.JK, ASII.JK, etc.
 
-Format input adapter standar (dengan slash) → kita map ke Yahoo:
+The standard adapter input format (with a slash) is mapped to Yahoo's:
   'BBCA/IDR' → 'BBCA.JK'
   'BBRI/IDR' → 'BBRI.JK'
 
-Atau accept langsung 'BBCA.JK' format Yahoo.
+Or pass the Yahoo format directly: 'BBCA.JK'.
 
 Free tier:
-  - Tidak ada hard rate limit, tapi heavy use bisa kena soft block
+  - No hard rate limit, but heavy use can trigger a soft block
   - Daily, 1h, 5m, 1m available
-  - Historical: 60 hari untuk 1m, 730 hari untuk 1h, unlimited untuk 1d
-  - Real-time delayed ~15 menit (acceptable untuk swing/long-term signal)
+  - History: 60 days for 1m, 730 days for 1h, unlimited for 1d
+  - Real-time delayed ~15 minutes (acceptable for swing/long-term signals)
 
-Live trading TIDAK didukung — yfinance data-only.
-Untuk live butuh broker IDX API (Mirae/Stockbit — tidak public),
-atau klien execute manual setelah signal.
+Live trading is NOT supported — yfinance is data-only.
+Live trading needs an IDX broker API (Mirae/Stockbit — not public),
+or the client executes manually after the signal.
 """
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ import pandas as pd
 if TYPE_CHECKING:
     from ..config import AdapterConfig
 
-# yfinance import-time bisa lambat — defer
+# yfinance import time can be slow — defer it
 _yf = None
 
 
@@ -55,7 +55,7 @@ _CACHE_TTL_SEC = 600
 
 
 def _to_yahoo_symbol(symbol: str) -> str:
-    """Normalize. 'BBCA/IDR' or 'BBCA' or 'BBCA.JK' → 'BBCA.JK'."""
+    """Normalize: 'BBCA/IDR' or 'BBCA' or 'BBCA.JK' → 'BBCA.JK'."""
     s = symbol.upper().strip()
     if s.endswith(".JK"):
         return s
@@ -81,8 +81,8 @@ class IdxAdapter:
         yahoo_sym = _to_yahoo_symbol(symbol)
         interval = _TF_MAP.get(timeframe, "1d")
 
-        # yfinance period-based fetch (lebih reliable dari date-range untuk intraday)
-        # Untuk daily ambil 2 tahun penuh; intraday max yang yfinance kasih
+        # yfinance period-based fetch (more reliable than a date-range for intraday)
+        # For daily, pull 2 full years; intraday is capped at whatever yfinance allows
         if interval == "1d":
             period = "5y"
         elif interval in ("1wk", "1mo"):
@@ -109,9 +109,9 @@ class IdxAdapter:
             raw = t.history(period=period, interval=interval, auto_adjust=True)
             if raw is None or raw.empty:
                 raise RuntimeError(
-                    f"yfinance kosong untuk {yahoo_sym} interval={interval} period={period}"
+                    f"yfinance returned empty data for {yahoo_sym} interval={interval} period={period}"
                 )
-            # Normalize columns ke format adapter standar
+            # Normalize columns to the standard adapter format
             df = pd.DataFrame({
                 "timestamp": pd.to_datetime(raw.index).tz_localize(None) if raw.index.tz is not None else pd.to_datetime(raw.index),
                 "open": raw["Open"].astype(float),
@@ -131,25 +131,14 @@ class IdxAdapter:
         yahoo_sym = _to_yahoo_symbol(symbol)
         yf = _yfinance()
         t = yf.Ticker(yahoo_sym)
-        # fast_info lebih cepat daripada .info
+        # fast_info is faster than .info
         try:
             return float(t.fast_info.get("last_price"))
         except Exception:
-            # fallback ke history terakhir
+            # fall back to the latest history bar
             df = self.fetch_ohlcv(symbol, "1d", limit=1)
             return float(df["close"].iloc[-1])
 
-    def fetch_balance(self, quote: str = "IDR") -> float:
-        raise NotImplementedError(
-            "Saham IDX live trading via yfinance tidak didukung. "
-            "Klien execute manual via broker mereka (Stockbit/Mirae/dll)."
-        )
-
-    def create_market_order(self, symbol: str, side: str, qty: float) -> dict:
-        raise NotImplementedError(
-            "Saham IDX live trading tidak didukung. Manual execution required."
-        )
-
     @property
     def rate_limit_ms(self) -> int:
-        return 500  # konservatif: 0.5s antar call
+        return 500  # conservative: 0.5s between calls

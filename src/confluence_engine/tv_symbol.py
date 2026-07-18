@@ -1,9 +1,9 @@
-"""Map symbol internal → format TradingView (untuk chart widget).
+"""Map an internal symbol → TradingView format (for the chart widget).
 
-Format TradingView: `EXCHANGE:SYMBOL`
+TradingView format: `EXCHANGE:SYMBOL`
   Crypto Gate         → 'GATEIO:BTCUSDT'
   Forex (Oanda/FX)    → 'OANDA:EURUSD'
-  Saham IDX           → 'IDX:BBCA'
+  IDX stock           → 'IDX:BBCA'
   Gold                → 'TVC:GOLD'
 """
 from __future__ import annotations

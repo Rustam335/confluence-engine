@@ -1,10 +1,9 @@
 """Market adapter abstraction.
 
-Engine `strategy.py`/`backtest.py`/`executor.py` panggil adapter, bukan CCXT
-langsung. Setiap market (crypto/forex/saham) punya adapter sendiri.
+`strategy.py` and `engine.py` call adapters, not CCXT (or any data provider)
+directly. Each market (crypto/forex/stock) has its own adapter.
 
-Kontrak minimal: `fetch_ohlcv` + `fetch_ticker_price`.
-Optional (untuk live trading): `fetch_balance` + `create_market_order`.
+Minimal contract: `fetch_ohlcv` + `fetch_ticker_price`.
 """
 from __future__ import annotations
 
@@ -30,12 +29,6 @@ class MarketAdapter(Protocol):
 
     def fetch_ticker_price(self, symbol: str) -> float:
         """Last traded price."""
-
-    def fetch_balance(self, quote: str = "USDT") -> float:
-        """Free balance untuk quote asset. Optional — raise NotImplementedError kalau tidak support."""
-
-    def create_market_order(self, symbol: str, side: str, qty: float) -> dict:
-        """Place market order. Optional. Return dict info filled price + qty."""
 
 
 def get_adapter(market: str, config: "AdapterConfig | None" = None) -> MarketAdapter:

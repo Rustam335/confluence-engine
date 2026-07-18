@@ -40,19 +40,6 @@ class CcxtAdapter:
     def fetch_ticker_price(self, symbol: str) -> float:
         return float(self._ex.fetch_ticker(symbol)["last"])
 
-    def fetch_balance(self, quote: str = "USDT") -> float:
-        if not self._config.exchange_api_key or not self._config.exchange_api_secret:
-            raise RuntimeError("Live mode butuh EXCHANGE_API_KEY + EXCHANGE_API_SECRET")
-        bal = self._ex.fetch_balance()
-        return float(bal.get("free", {}).get(quote, 0.0))
-
-    def create_market_order(self, symbol: str, side: str, qty: float) -> dict[str, Any]:
-        if not self._config.exchange_api_key or not self._config.exchange_api_secret:
-            raise RuntimeError("Live mode butuh EXCHANGE_API_KEY + EXCHANGE_API_SECRET")
-        return self._ex.create_order(
-            symbol=symbol, type="market", side=side.lower(), amount=qty,
-        )
-
     @property
     def rate_limit_ms(self) -> int:
         return getattr(self._ex, "rateLimit", 50) or 50

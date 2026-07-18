@@ -1,17 +1,17 @@
-"""TwelveData adapter — forex data dengan free tier yang generous.
+"""TwelveData adapter — forex data with a generous free tier.
 
 Free tier:
   - 800 req/day, 8 req/min
-  - Semua interval: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 1day, 1week, 1month
-  - Sampai 5000 candle per call
-  - Real-time price via /price endpoint
+  - All intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 1day, 1week, 1month
+  - Up to 5000 candles per call
+  - Real-time price via the /price endpoint
 
-Get free key di https://twelvedata.com/account/api-keys
+Get a free key at https://twelvedata.com/account/api-keys
 
-Format symbol: 'EUR/USD', 'GBP/USD', 'USD/JPY' (slash-separated, sama dengan CCXT).
+Symbol format: 'EUR/USD', 'GBP/USD', 'USD/JPY' (slash-separated, same as CCXT).
 
-Live trading TIDAK didukung — TwelveData data-only. Untuk live forex perlu
-broker API (OANDA, MT5, dll) — defer ke phase berikutnya.
+Live trading is NOT supported — TwelveData is data-only. Live forex trading
+needs a broker API (OANDA, MT5, etc.) — deferred to a later phase.
 """
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ import requests
 if TYPE_CHECKING:
     from ..config import AdapterConfig
 
-# TwelveData interval mapping
+# TwelveData interval mapping (internal timeframe alias -> TwelveData interval)
 _TF_MAP = {
     "1m": "1min", "1min": "1min",
     "5m": "5min", "5min": "5min",
@@ -41,11 +41,7 @@ _TF_MAP = {
 
 # Cache: (symbol, tf) → (timestamp_loaded, df)
 _CACHE: dict[tuple[str, str], tuple[float, pd.DataFrame]] = {}
-_CACHE_TTL_SEC = 600  # 10 menit — hemat quota free tier
-
-
-class AlphaVantageAdapter:
-    """Backward-compat alias — sebelumnya class name ini, sekarang TwelveData impl."""
+_CACHE_TTL_SEC = 600  # 10 minutes — saves free-tier quota
 
 
 class TwelveDataAdapter:
@@ -59,8 +55,8 @@ class TwelveDataAdapter:
     def _request(self, path: str, params: dict) -> dict:
         if not self._config.twelvedata_api_key:
             raise RuntimeError(
-                "TWELVEDATA_API_KEY belum diset. "
-                "Get free key di https://twelvedata.com/account/api-keys"
+                "twelvedata_api_key is not set — pass it to AdapterConfig. "
+                "Get a free key at https://twelvedata.com/account/api-keys"
             )
         params = {**params, "apikey": self._config.twelvedata_api_key}
         r = requests.get(f"{self._base}/{path}", params=params, timeout=30)
@@ -94,7 +90,7 @@ class TwelveDataAdapter:
         if df is None:
             interval = _TF_MAP.get(timeframe)
             if not interval:
-                raise RuntimeError(f"Timeframe {timeframe!r} tidak didukung TwelveData")
+                raise RuntimeError(f"Timeframe {timeframe!r} is not supported by TwelveData")
             params = {
                 "symbol": symbol,
                 "interval": interval,
@@ -135,18 +131,7 @@ class TwelveDataAdapter:
             raise RuntimeError(f"TwelveData no price for {symbol}")
         return float(price)
 
-    def fetch_balance(self, quote: str = "USD") -> float:
-        raise NotImplementedError(
-            "Forex live trading via TwelveData tidak didukung — adapter ini data-only. "
-            "Untuk live butuh broker (OANDA / MT5)."
-        )
-
-    def create_market_order(self, symbol: str, side: str, qty: float) -> dict:
-        raise NotImplementedError(
-            "Forex live trading via TwelveData tidak didukung."
-        )
-
     @property
     def rate_limit_ms(self) -> int:
-        # Free tier 8/min = 7.5s antar call. Konservatif 8s.
+        # Free tier 8/min = 7.5s between calls. Conservative: 8s.
         return 8_000

@@ -1,4 +1,4 @@
-"""Indikator teknikal: EMA, RSI, ATR, volume MA, ADX, Bollinger Bands, Donchian."""
+"""Technical indicators: EMA, RSI, ATR, volume MA, ADX, Bollinger Bands, Donchian."""
 from __future__ import annotations
 
 import pandas as pd
@@ -15,13 +15,13 @@ def calculate_indicators(
     adx_len: int = 14,
     donchian_len: int = 20,
 ) -> pd.DataFrame:
-    """Hitung semua indikator yang dibutuhkan strategi hybrid.
+    """Compute all indicators needed by the hybrid strategy.
 
-    Output kolom (selain OHLCV):
+    Output columns (in addition to OHLCV):
       ema_fast, ema_slow, rsi, atr, vol_ma  (existing)
-      bb_upper, bb_middle, bb_lower, bb_width   (untuk mean reversion + regime)
-      adx                                        (untuk regime detection)
-      donchian_high, donchian_low                (untuk breakout)
+      bb_upper, bb_middle, bb_lower, bb_width   (for mean reversion + regime)
+      adx                                        (for regime detection)
+      donchian_high, donchian_low                (for breakout)
     """
     df = df.copy()
     df["ema_fast"] = ta.ema(df["close"], length=ema_fast)
@@ -30,8 +30,8 @@ def calculate_indicators(
     df["atr"] = ta.atr(df["high"], df["low"], df["close"])
     df["vol_ma"] = df["volume"].rolling(20).mean()
 
-    # Bollinger Bands — untuk mean reversion entry + regime detection
-    # Note: pandas-ta column naming bisa beda antar versi (BBL_20_2.0 vs BBL_20_2.0_2.0)
+    # Bollinger Bands — for mean reversion entry + regime detection
+    # Note: pandas-ta column naming can differ between versions (BBL_20_2.0 vs BBL_20_2.0_2.0)
     # — detect by prefix.
     bb = ta.bbands(df["close"], length=bb_len, std=bb_std)
     if bb is not None and len(bb.columns) > 0:
@@ -44,14 +44,14 @@ def calculate_indicators(
             df["bb_upper"] = bb[col_upper]
             df["bb_width"] = (df["bb_upper"] - df["bb_lower"]) / df["bb_middle"]
 
-    # ADX — untuk regime detection (trending vs ranging)
+    # ADX — for regime detection (trending vs ranging)
     adx = ta.adx(df["high"], df["low"], df["close"], length=adx_len)
     if adx is not None and len(adx.columns) > 0:
         col_adx = next((c for c in adx.columns if c.startswith("ADX_")), None)
         if col_adx:
             df["adx"] = adx[col_adx]
 
-    # Donchian channel — untuk breakout entry
+    # Donchian channel — for breakout entry
     df["donchian_high"] = df["high"].rolling(donchian_len).max()
     df["donchian_low"] = df["low"].rolling(donchian_len).min()
 

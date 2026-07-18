@@ -57,8 +57,10 @@ def run_backtest(
     initial_equity: float = 10_000.0,
     fee: float = 0.0,
 ) -> BacktestResult:
-    """Long-flat backtest: expanding-window walk. On BUY (flat) go long at next close;
-    on SELL/HOLD-with-open-position, exit at next close. Simplified reference impl."""
+    """Long-flat backtest: expanding-window walk. The signal for bar i is computed
+    from bars 0..i (inclusive), and any resulting entry/exit fills at bar i's close
+    — there is no execution lag. On BUY (flat) go long at that close; on
+    SELL/HOLD-with-open-position, exit at that close. Simplified reference impl."""
     equity = initial_equity
     position_price: float | None = None
     trades: list[dict] = []
@@ -70,9 +72,11 @@ def run_backtest(
         price = float(df.iloc[i]["close"])
         if position_price is None and sig["signal"] == "BUY":
             position_price = price * (1 + fee)
+        # HOLD while long is treated as an exit too (e.g. a scorer veto unwinds
+        # the open position), not just an explicit SELL.
         elif position_price is not None and sig["signal"] in ("SELL", "HOLD"):
             gross = (price * (1 - fee)) - position_price
-            pnl = equity * (config.risk_percent / 100.0 if config else 0.01) * (gross / position_price) * 100
+            pnl = equity * (config.risk_percent / 100.0 if config else 0.01) * (gross / position_price)
             equity += pnl
             trades.append({"entry": position_price, "exit": price, "pnl": pnl})
             position_price = None

@@ -25,20 +25,61 @@ A pluggable trading-strategy framework for Python: technical indicators, market-
 
 ## Write your own strategy
 
-    from confluence_engine import Strategy, Signal, StrategyConfig
-    import pandas as pd
+A strategy is any object with a `name` and a `generate_signal(df, config) -> Signal` method.
+The `df` you receive already has indicator columns computed (`ema_fast`, `ema_slow`, `rsi`,
+`atr`, `adx`, `bb_lower`/`bb_middle`/`bb_upper`, `donchian_high`/`donchian_low`, ...). A
+`Signal` is a dict with `signal` (`"BUY"` / `"SELL"` / `"HOLD"`), `reason`, `score`,
+`stop_loss`, and `take_profit`.
 
-    class MyStrategy:
-        name = "my-strategy"
+Here's a complete custom strategy — buy pullbacks inside an uptrend, with ATR-based
+stop-loss and take-profit — run end to end through the backtester:
+
+    import pandas as pd
+    from confluence_engine import (
+        Signal, StrategyConfig, AdapterConfig,
+        get_adapter, calculate_indicators, run_backtest,
+    )
+
+    class EmaRsiPullback:
+        """Buy pullbacks in an uptrend: fast EMA above slow EMA, RSI dipping then recovering."""
+        name = "ema-rsi-pullback"
+
         def generate_signal(self, df: pd.DataFrame, config: StrategyConfig) -> Signal:
             last = df.iloc[-1]
-            if last["rsi"] < 25:
-                return {"signal": "BUY", "reason": "deeply oversold", "score": 0.8,
-                        "stop_loss": None, "take_profit": None}
-            return {"signal": "HOLD", "reason": "wait", "score": 0.0,
+            close, atr = float(last["close"]), float(last["atr"])
+            uptrend = last["ema_fast"] > last["ema_slow"]
+            pullback = 35 < last["rsi"] < 50  # not oversold — coming back up
+
+            if uptrend and pullback:
+                return {
+                    "signal": "BUY",
+                    "reason": f"uptrend pullback (RSI {last['rsi']:.1f})",
+                    "score": 0.7,
+                    "stop_loss": close - 2 * atr,
+                    "take_profit": close + 3 * atr,
+                }
+            return {"signal": "HOLD", "reason": "no setup", "score": 0.0,
                     "stop_loss": None, "take_profit": None}
 
-Pass an optional `scorer=lambda df, config: 0.0..1.0` to `run_strategy` / `run_backtest`; signals scoring below `config.confidence_threshold` are downgraded to HOLD.
+    cfg = StrategyConfig(confidence_threshold=0.5)
+    df = get_adapter("crypto", AdapterConfig(exchange="binance")).fetch_ohlcv("ETH/USDT", "1h", limit=500)
+    df = calculate_indicators(df, cfg.ema_fast, cfg.ema_slow, cfg.rsi_length)
+
+    result = run_backtest(df, EmaRsiPullback(), cfg)
+    print(f"{result.n_trades} trades, return {result.return_pct:.2f}%")
+
+### Bring your own scorer (optional)
+
+A scorer is a `callable(df, config) -> float` returning a confidence in `[0, 1]`. Pass it
+to `run_strategy` / `run_backtest`, and any `BUY`/`SELL` scoring below
+`config.confidence_threshold` is automatically downgraded to `HOLD` — a clean seam for
+plugging in your own conviction model without touching the strategy:
+
+    def trend_strength_scorer(df: pd.DataFrame, config: StrategyConfig) -> float:
+        adx = float(df.iloc[-1]["adx"])   # strong trend (ADX >= 40) => full confidence
+        return min(adx / 40.0, 1.0)
+
+    result = run_backtest(df, EmaRsiPullback(), cfg, scorer=trend_strength_scorer)
 
 ## License
 

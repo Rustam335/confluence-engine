@@ -15,11 +15,12 @@ needs a broker API (OANDA, MT5, etc.) — deferred to a later phase.
 """
 from __future__ import annotations
 
-import time
 from typing import TYPE_CHECKING
 
 import pandas as pd
 import requests
+
+from .._cache import TTLCache
 
 if TYPE_CHECKING:
     from ..config import AdapterConfig
@@ -39,9 +40,9 @@ _TF_MAP = {
     "1mo": "1month", "1month": "1month",
 }
 
-# Cache: (symbol, tf) → (timestamp_loaded, df)
-_CACHE: dict[tuple[str, str], tuple[float, pd.DataFrame]] = {}
+# Cache: (symbol, tf) → df
 _CACHE_TTL_SEC = 600  # 10 minutes — saves free-tier quota
+_CACHE: TTLCache[tuple[str, str], pd.DataFrame] = TTLCache(_CACHE_TTL_SEC)
 
 
 class TwelveDataAdapter:
@@ -77,15 +78,8 @@ class TwelveDataAdapter:
         limit: int = 5000,
     ) -> pd.DataFrame:
         cache_key = (symbol, timeframe)
-        now = time.time()
-        if cache_key in _CACHE:
-            cached_at, df_cached = _CACHE[cache_key]
-            if now - cached_at < _CACHE_TTL_SEC:
-                df = df_cached.copy()
-            else:
-                df = None
-        else:
-            df = None
+        cached = _CACHE.get(cache_key)
+        df = cached.copy() if cached is not None else None
 
         if df is None:
             interval = _TF_MAP.get(timeframe)
@@ -116,7 +110,7 @@ class TwelveDataAdapter:
                     "volume": float(v.get("volume", 0)),  # forex usually 0
                 })
             df = pd.DataFrame(rows).sort_values("timestamp").reset_index(drop=True)
-            _CACHE[cache_key] = (now, df.copy())
+            _CACHE.set(cache_key, df.copy())
 
         # Filter by since_ms + limit (mimic CCXT semantics)
         if since_ms is not None:

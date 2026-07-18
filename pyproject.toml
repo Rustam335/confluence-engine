@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "confluence-engine"
-version = "0.1.0"
+version = "0.1.1"
 description = "A pluggable trading-strategy framework: indicators, market data adapters, backtesting, and a Strategy interface you implement yourself."
 readme = "README.md"
 requires-python = ">=3.11"

@@ -21,10 +21,11 @@ or the client executes manually after the signal.
 """
 from __future__ import annotations
 
-import time
 from typing import TYPE_CHECKING
 
 import pandas as pd
+
+from .._cache import TTLCache
 
 if TYPE_CHECKING:
     from ..config import AdapterConfig
@@ -49,9 +50,9 @@ _TF_MAP = {
     "1mo": "1mo", "1month": "1mo",
 }
 
-# Cache: (symbol, tf, period) → (loaded_at, df)
-_CACHE: dict[tuple[str, str, str], tuple[float, pd.DataFrame]] = {}
+# Cache: (symbol, tf, period) → df
 _CACHE_TTL_SEC = 600
+_CACHE: TTLCache[tuple[str, str, str], pd.DataFrame] = TTLCache(_CACHE_TTL_SEC)
 
 
 def _to_yahoo_symbol(symbol: str) -> str:
@@ -93,15 +94,8 @@ class IdxAdapter:
             period = "7d"
 
         cache_key = (yahoo_sym, interval, period)
-        now = time.time()
-        if cache_key in _CACHE:
-            cached_at, df_cached = _CACHE[cache_key]
-            if now - cached_at < _CACHE_TTL_SEC:
-                df = df_cached.copy()
-            else:
-                df = None
-        else:
-            df = None
+        cached = _CACHE.get(cache_key)
+        df = cached.copy() if cached is not None else None
 
         if df is None:
             yf = _yfinance()
@@ -120,7 +114,7 @@ class IdxAdapter:
                 "close": raw["Close"].astype(float),
                 "volume": raw["Volume"].astype(float),
             }).reset_index(drop=True)
-            _CACHE[cache_key] = (now, df.copy())
+            _CACHE.set(cache_key, df.copy())
 
         if since_ms is not None:
             since_ts = pd.to_datetime(since_ms, unit="ms")

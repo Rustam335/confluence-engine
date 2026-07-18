@@ -1,5 +1,10 @@
 # confluence-engine
 
+[![PyPI version](https://img.shields.io/pypi/v/confluence-engine.svg)](https://pypi.org/project/confluence-engine/)
+[![Python versions](https://img.shields.io/pypi/pyversions/confluence-engine.svg)](https://pypi.org/project/confluence-engine/)
+[![License: MIT](https://img.shields.io/pypi/l/confluence-engine.svg)](https://github.com/Rustam335/confluence-engine/blob/main/LICENSE)
+[![CI](https://github.com/Rustam335/confluence-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Rustam335/confluence-engine/actions/workflows/ci.yml)
+
 A pluggable trading-strategy framework for Python: technical indicators, market-data adapters (crypto/forex/idx), a backtester, and a clean `Strategy` interface you implement yourself. Bring your own signal logic and scoring — the framework stays out of your way.
 
 ## Install
